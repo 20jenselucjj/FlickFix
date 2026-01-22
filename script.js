@@ -74,8 +74,10 @@ const state = {
     currentView: 'discovery', // 'discovery' | 'watchlist'
     mediaType: 'movie', // 'movie' | 'tv'
     genres: {}, // id -> name mapping
+    rawGenres: { movie: [], tv: [] }, // Raw lists for dropdown
     currentItem: null,
     currentMood: 'any',
+    currentGenre: 'all', // 'all' | genre_id
     watchlist: JSON.parse(localStorage.getItem('flickfix_watchlist')) || [],
     seenHistory: new Set() // Track session history to avoid repeats
 };
@@ -97,7 +99,10 @@ const dom = {
         logo: document.getElementById('logo-btn'),
         backToDiscover: document.getElementById('btn-back-to-discover'),
         moodBtn: document.getElementById('mood-btn'),
-        moodText: document.getElementById('current-mood-text')
+        moodText: document.getElementById('current-mood-text'),
+        genreBtn: document.getElementById('genre-btn'),
+        genreText: document.getElementById('current-genre-text'),
+        genreDropdown: document.getElementById('genre-dropdown')
     },
     hero: {
         card: document.getElementById('hero-card'),
@@ -147,9 +152,57 @@ async function fetchGenres() {
             genreMap[g.id] = g.name;
         });
         state.genres = genreMap;
+        state.rawGenres.movie = movieGenres.genres;
+        state.rawGenres.tv = tvGenres.genres;
+        
+        populateGenreDropdown();
     } catch (error) {
         console.error('Failed to fetch genres:', error);
     }
+}
+
+function populateGenreDropdown() {
+    const list = dom.buttons.genreDropdown;
+    list.innerHTML = '';
+
+    // Add "All Genres" option
+    const allBtn = document.createElement('button');
+    allBtn.className = 'text-left px-4 py-2 hover:bg-white/10 rounded-lg text-sm text-gray-200 transition-all w-full flex items-center justify-between group/item';
+    allBtn.innerHTML = `<span>All Genres</span>${state.currentGenre === 'all' ? '<i class="fas fa-check text-green-500"></i>' : ''}`;
+    allBtn.onclick = () => selectGenre('all');
+    list.appendChild(allBtn);
+
+    // Add specific genres
+    const genres = state.rawGenres[state.mediaType] || [];
+    // Sort alphabetically
+    genres.sort((a, b) => a.name.localeCompare(b.name));
+
+    genres.forEach(g => {
+        const btn = document.createElement('button');
+        btn.className = 'text-left px-4 py-2 hover:bg-white/10 rounded-lg text-sm text-gray-200 transition-all w-full flex items-center justify-between group/item';
+        btn.innerHTML = `<span>${g.name}</span>${state.currentGenre == g.id ? '<i class="fas fa-check text-green-500"></i>' : ''}`;
+        btn.onclick = () => selectGenre(g.id, g.name);
+        list.appendChild(btn);
+    });
+}
+
+function selectGenre(id, name) {
+    state.currentGenre = id;
+    
+    if (id === 'all') {
+        dom.buttons.genreText.innerText = 'All Genres';
+        // If we switch to All Genres, we don't necessarily need to reset Mood unless we want to.
+        // But for clarity, let's keep Mood as is.
+    } else {
+        dom.buttons.genreText.innerText = name;
+        // If specific genre selected, reset Mood to 'Any' to avoid conflict
+        state.currentMood = 'any';
+        dom.buttons.moodText.innerText = 'Any Mood';
+    }
+
+    // Re-populate to update checkmarks
+    populateGenreDropdown();
+    fetchRandomContent();
 }
 
 async function fetchRandomContent() {
@@ -170,6 +223,9 @@ async function fetchRandomContent() {
         
         if (includeIds) url += `&with_genres=${includeIds}`;
         if (excludeIds) url += `&without_genres=${excludeIds}`;
+    } else if (state.currentGenre !== 'all') {
+        // Apply Specific Genre Filter
+        url += `&with_genres=${state.currentGenre}`;
     }
 
     try {
@@ -415,6 +471,9 @@ function renderHero(item) {
     dom.hero.overview.textContent = item.overview || "No overview available.";
     dom.hero.typeBadge.textContent = state.mediaType === 'movie' ? 'Movie' : 'TV Show';
     
+    // Reset overview expansion state
+    dom.hero.overview.classList.add('line-clamp-2'); 
+
     // Genres
     dom.hero.genres.innerHTML = '';
     if (item.genre_ids) {
@@ -584,7 +643,15 @@ dom.buttons.movie.addEventListener('click', () => {
         dom.buttons.tv.classList.remove('bg-red-600', 'text-white', 'shadow-md');
         dom.buttons.tv.classList.add('text-gray-400');
         
-        fetchRandomContent();
+        // Reset filters when switching type
+        selectGenre('all'); // This calls fetchRandomContent
+        // But selectGenre also resets mood to 'any' if not 'all', which is fine.
+        // Actually selectGenre('all') does NOT reset Mood.
+        // So we should probably keep Mood if possible, but genres are different.
+        // Let's reset Genre to All, and Keep Mood if valid? 
+        // Moods are mapped in MOODS object for both movie and tv, so keeping Mood is fine.
+        // But the dropdown for genres needs to update.
+        populateGenreDropdown();
     }
 });
 
@@ -597,7 +664,8 @@ dom.buttons.tv.addEventListener('click', () => {
         dom.buttons.movie.classList.remove('bg-red-600', 'text-white', 'shadow-md');
         dom.buttons.movie.classList.add('text-gray-400');
         
-        fetchRandomContent();
+        selectGenre('all');
+        populateGenreDropdown();
     }
 });
 
@@ -611,6 +679,14 @@ dom.buttons.logo.addEventListener('click', () => {
 
 dom.buttons.backToDiscover.addEventListener('click', () => {
     toggleView('discovery');
+});
+
+// Click on overview to toggle expansion (Mobile only essentially, as desktop has line-clamp-6)
+dom.hero.overview.addEventListener('click', () => {
+    // Only toggle if window width is small (mobile breakpoint is usually 768px in Tailwind 'md')
+    if (window.innerWidth < 768) {
+        dom.hero.overview.classList.toggle('line-clamp-2');
+    }
 });
 
 dom.buttons.details.addEventListener('click', openDetailsModal);
@@ -630,6 +706,18 @@ moodOptions.forEach(opt => {
         
         state.currentMood = mood;
         dom.buttons.moodText.innerText = text;
+        
+        // Reset Genre to All when Mood is selected (if not Any Mood)
+        // If Any Mood is selected, we could technically keep the Genre, but let's be consistent.
+        // Actually, "Any Mood" essentially means "No Mood Filter". 
+        // If I select "Any Mood", maybe I want to keep my Genre selection?
+        // But if I select "Chill", I definitely want to override Genre.
+        
+        if (mood !== 'any') {
+            state.currentGenre = 'all';
+            dom.buttons.genreText.innerText = 'All Genres';
+            populateGenreDropdown(); // Update checkmarks
+        }
         
         // Refresh content with new mood
         fetchRandomContent();
