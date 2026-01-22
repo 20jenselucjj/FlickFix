@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FlickFix - Discover Movies & TV</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- FontAwesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Color Thief -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/color-thief/2.3.0/color-thief.umd.js"></script>
+    
+    <!-- Custom Styles -->
+    <link rel="stylesheet" href="style.css">
+</head>
+<body class="bg-gray-900 text-white min-h-screen font-sans overflow-x-hidden">
+
+    <!-- Navbar -->
+    <nav class="fixed top-0 w-full bg-gray-900/90 backdrop-blur-md border-b border-gray-800 z-50 shadow-lg">
+        <div class="container mx-auto px-4 py-3 flex justify-between items-center">
+            <div class="flex items-center gap-2 cursor-pointer" id="logo-btn">
+                <i class="fas fa-film text-red-500 text-2xl"></i>
+                <h1 class="text-2xl font-bold tracking-wider text-transparent bg-clip-text bg-gradient-to-r from-red-500 to-orange-500">FlickFix</h1>
+            </div>
+            
+            <button id="watchlist-btn" class="flex items-center gap-2 bg-gray-800 hover:bg-gray-700 px-3 py-2 md:px-4 md:py-2 rounded-full transition-all duration-300 border border-gray-700 hover:border-gray-500 group">
+                <i class="fas fa-heart text-red-500 group-hover:scale-110 transition-transform"></i>
+                <span class="font-medium text-sm md:text-base"><span class="hidden sm:inline">My Watchlist</span> (<span id="watchlist-count">0</span>)</span>
+            </button>
+        </div>
+    </nav>
+
+    <!-- Main Container -->
+    <main class="container mx-auto px-4 pt-24 pb-12 min-h-screen flex flex-col">
+
+        <!-- Discovery View -->
+        <div id="discovery-view" class="flex-grow flex flex-col items-center justify-center w-full max-w-4xl mx-auto">
+            
+            <!-- Controls Container -->
+            <div class="flex flex-col md:flex-row gap-4 mb-8 w-full max-w-4xl justify-between items-center z-10">
+                <!-- Type Toggle -->
+                <div class="flex bg-gray-800 rounded-full p-1 shadow-inner border border-gray-700">
+                    <button id="btn-movie" class="px-6 py-2 rounded-full text-sm font-bold transition-all duration-300 bg-red-600 text-white shadow-md">Movies</button>
+                    <button id="btn-tv" class="px-6 py-2 rounded-full text-sm font-bold transition-all duration-300 text-gray-400 hover:text-white">TV Shows</button>
+                </div>
+
+                <!-- Mood Filter -->
+                <div class="relative group z-50">
+                    <button id="mood-btn" class="flex items-center gap-2 bg-gray-800 text-white px-5 py-2.5 rounded-full border border-gray-700 hover:border-gray-500 transition-all shadow-lg hover:shadow-blue-500/20 active:scale-95">
+                        <i class="fas fa-theater-masks text-yellow-500"></i>
+                        <span id="current-mood-text" class="font-medium">Any Mood</span>
+                        <i class="fas fa-chevron-down text-xs ml-2 transition-transform group-hover:rotate-180"></i>
+                    </button>
+                    
+                    <!-- Dropdown with Invisible Bridge -->
+                    <div class="absolute right-0 pt-2 w-56 opacity-0 translate-y-2 pointer-events-none group-hover:opacity-100 group-hover:translate-y-0 group-hover:pointer-events-auto transition-all duration-300 ease-out">
+                        <div class="bg-gray-900/95 backdrop-blur-xl rounded-xl shadow-2xl border border-gray-700 overflow-hidden ring-1 ring-white/10">
+                            <div class="flex flex-col p-2 gap-1" id="mood-dropdown">
+                                <button class="text-left px-4 py-3 hover:bg-white/10 rounded-lg text-sm text-gray-200 transition-all mood-option flex items-center gap-3 group/item" data-mood="any">
+                                    <span class="text-lg group-hover/item:scale-125 transition-transform">🍿</span> 
+                                    <div class="flex flex-col">
+                                        <span class="font-medium">Any Mood</span>
+                                        <span class="text-[10px] text-gray-400">All Genres</span>
+                                    </div>
+                                </button>
+                                <button class="text-left px-4 py-3 hover:bg-white/10 rounded-lg text-sm text-gray-200 transition-all mood-option flex items-center gap-3 group/item" data-mood="chill">
+                                    <span class="text-lg group-hover/item:scale-125 transition-transform">😎</span>
+                                    <div class="flex flex-col">
+                                        <span class="font-medium">Chill & Fun</span>
+                                        <span class="text-[10px] text-gray-400">Comedy, Animation, Family</span>
+                                    </div>
+                                </button>
+                                <button class="text-left px-4 py-3 hover:bg-white/10 rounded-lg text-sm text-gray-200 transition-all mood-option flex items-center gap-3 group/item" data-mood="adrenaline">
+                                    <span class="text-lg group-hover/item:scale-125 transition-transform">🔥</span>
+                                    <div class="flex flex-col">
+                                        <span class="font-medium">Adrenaline</span>
+                                        <span class="text-[10px] text-gray-400">Action, Adventure, Thriller</span>
+                                    </div>
+                                </button>
+                                <button class="text-left px-4 py-3 hover:bg-white/10 rounded-lg text-sm text-gray-200 transition-all mood-option flex items-center gap-3 group/item" data-mood="brainy">
+                                    <span class="text-lg group-hover/item:scale-125 transition-transform">🧠</span>
+                                    <div class="flex flex-col">
+                                        <span class="font-medium">Brainy</span>
+                                        <span class="text-[10px] text-gray-400">Sci-Fi, Documentary, History</span>
+                                    </div>
+                                </button>
+                                <button class="text-left px-4 py-3 hover:bg-white/10 rounded-lg text-sm text-gray-200 transition-all mood-option flex items-center gap-3 group/item" data-mood="dark">
+                                    <span class="text-lg group-hover/item:scale-125 transition-transform">🌑</span>
+                                    <div class="flex flex-col">
+                                        <span class="font-medium">Dark & Intense</span>
+                                        <span class="text-[10px] text-gray-400">Horror, Crime, Mystery</span>
+                                    </div>
+                                </button>
+                                <button class="text-left px-4 py-3 hover:bg-white/10 rounded-lg text-sm text-gray-200 transition-all mood-option flex items-center gap-3 group/item" data-mood="emotional">
+                                    <span class="text-lg group-hover/item:scale-125 transition-transform">😭</span>
+                                    <div class="flex flex-col">
+                                        <span class="font-medium">Emotional</span>
+                                        <span class="text-[10px] text-gray-400">Drama, Romance</span>
+                                    </div>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Hero Card -->
+            <div id="hero-card" class="w-full bg-gray-800 rounded-2xl overflow-hidden shadow-2xl border border-gray-700 relative fade-in hidden">
+                <div class="md:flex h-full min-h-[500px]">
+                    <!-- Poster -->
+                    <div class="md:w-2/5 relative h-[400px] md:h-auto">
+                        <img id="poster-img" src="" alt="Poster" class="w-full h-full object-cover object-top">
+                        <div class="absolute inset-0 bg-gradient-to-t from-gray-900 via-transparent to-transparent md:hidden"></div>
+                    </div>
+                    
+                    <!-- Content -->
+                    <div class="md:w-3/5 p-5 md:p-8 flex flex-col justify-between bg-gradient-to-br from-gray-800 to-gray-900">
+                        <div>
+                            <div class="flex justify-between items-start mb-2">
+                                <span id="media-type-badge" class="bg-gray-700 text-xs px-2 py-1 rounded text-gray-300 uppercase tracking-wide">Movie</span>
+                                <div class="flex items-center gap-1 text-yellow-400">
+                                    <i class="fas fa-star"></i>
+                                    <span id="rating-score" class="font-bold text-lg">0.0</span>
+                                </div>
+                            </div>
+                            
+                            <h2 id="media-title" class="text-2xl md:text-4xl font-bold mb-2 leading-tight">Loading...</h2>
+                            
+                            <div class="flex flex-wrap gap-2 mb-4 md:mb-6" id="genre-tags">
+                                <!-- Genres inserted here -->
+                            </div>
+                            
+                            <p id="media-overview" class="text-gray-300 leading-relaxed mb-6 text-sm md:text-base line-clamp-4 md:line-clamp-6">
+                                Please wait while we fetch the latest content for you...
+                            </p>
+                        </div>
+
+                        <!-- Actions -->
+                        <div class="flex flex-wrap gap-3 md:gap-4 mt-auto">
+                            <button id="btn-skip" class="flex-1 px-4 py-3 md:px-6 bg-gray-700 hover:bg-gray-600 rounded-xl font-bold text-sm md:text-base transition-all duration-200 hover:scale-105 flex justify-center items-center gap-2">
+                                <i class="fas fa-times"></i> Skip
+                            </button>
+                            
+                            <button id="btn-trailer" class="flex-1 px-4 py-3 md:px-6 bg-blue-600 hover:bg-blue-500 rounded-xl font-bold text-sm md:text-base transition-all duration-200 hover:scale-105 hover:shadow-[0_0_15px_rgba(37,99,235,0.5)] flex justify-center items-center gap-2">
+                                <i class="fas fa-play"></i> Trailer
+                            </button>
+                            
+                            <button id="btn-add" class="w-full md:w-auto md:flex-[2] px-4 py-3 md:px-6 bg-green-600 hover:bg-green-500 rounded-xl font-bold text-sm md:text-base transition-all duration-200 hover:scale-105 hover:shadow-[0_0_15px_rgba(22,163,74,0.5)] flex justify-center items-center gap-2">
+                                <i class="fas fa-plus"></i> <span class="whitespace-nowrap">Add to Watchlist</span>
+                            </button>
+                        </div>
+                        
+                        <!-- More Info Link -->
+                        <div class="mt-4 text-center">
+                            <button id="btn-details" class="text-gray-400 hover:text-white text-sm underline decoration-gray-600 hover:decoration-white transition-all">
+                                View Full Details (Cast, Similar, & More)
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Loading State -->
+            <div id="loading-indicator" class="flex flex-col items-center justify-center py-20">
+                <div class="w-16 h-16 border-4 border-red-500 border-t-transparent rounded-full animate-spin mb-4"></div>
+                <p class="text-gray-400 animate-pulse">Finding something awesome...</p>
+            </div>
+
+        </div>
+
+        <!-- Watchlist View -->
+        <div id="watchlist-view" class="hidden w-full">
+            <div class="flex justify-between items-center mb-8">
+                <h2 class="text-3xl font-bold">Your Watchlist</h2>
+                <div class="bg-gray-800 rounded-lg p-1 flex">
+                    <button class="px-4 py-1 rounded-md bg-gray-700 text-white text-sm" id="sort-recent">Recent</button>
+                </div>
+            </div>
+
+            <div id="watchlist-grid" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
+                <!-- Watchlist Items -->
+            </div>
+
+            <div id="empty-watchlist" class="hidden flex flex-col items-center justify-center py-20 text-gray-500">
+                <i class="far fa-sad-tear text-6xl mb-4 opacity-50"></i>
+                <p class="text-xl">Your watchlist is empty.</p>
+                <button id="btn-back-to-discover" class="mt-4 text-red-500 hover:underline">Go discover movies!</button>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-black py-6 mt-auto border-t border-gray-800">
+        <div class="container mx-auto px-4 text-center text-gray-500 text-sm">
+            <p>&copy; 2026 FlickFix. Data provided by TMDB.</p>
+        </div>
+    </footer>
+
+    <!-- Details Modal -->
+    <div id="details-modal" class="fixed inset-0 z-[100] hidden">
+        <!-- Backdrop -->
+        <div class="absolute inset-0 bg-black/80 backdrop-blur-sm" id="modal-backdrop"></div>
+        
+        <!-- Modal Content -->
+        <div class="absolute inset-0 flex items-center justify-center p-4">
+            <div class="bg-gray-900 w-full max-w-4xl max-h-[90vh] rounded-2xl border border-gray-700 shadow-2xl overflow-hidden flex flex-col relative fade-in">
+                
+                <!-- Close Button -->
+                <button id="modal-close" class="absolute top-4 right-4 bg-black/50 hover:bg-red-600 text-white w-10 h-10 rounded-full flex items-center justify-center transition-all z-10">
+                    <i class="fas fa-times"></i>
+                </button>
+
+                <!-- Modal Header (Dynamic Image) -->
+                <div class="h-48 md:h-64 relative shrink-0">
+                    <img id="modal-backdrop-img" src="" alt="Backdrop" class="w-full h-full object-cover">
+                    <div class="absolute inset-0 bg-gradient-to-t from-gray-900 to-transparent"></div>
+                    <div class="absolute bottom-4 left-6 right-6">
+                        <h2 id="modal-title" class="text-3xl font-bold text-white shadow-black drop-shadow-md">Title</h2>
+                        <p id="modal-tagline" class="text-gray-300 italic text-sm mt-1"></p>
+                    </div>
+                </div>
+
+                <!-- Modal Body -->
+                <div class="overflow-y-auto p-6 space-y-8 custom-scrollbar">
+                    
+                    <!-- Cast Section -->
+                    <div>
+                        <h3 class="text-xl font-bold mb-4 text-red-500 flex items-center gap-2">
+                            <i class="fas fa-users"></i> Top Cast
+                        </h3>
+                        <div class="grid grid-cols-2 md:grid-cols-4 gap-4" id="modal-cast-grid">
+                            <!-- Cast Members -->
+                        </div>
+                    </div>
+
+                    <!-- Similar Movies Section -->
+                    <div>
+                        <h3 id="modal-similar-title" class="text-xl font-bold mb-4 text-blue-500 flex items-center gap-2">
+                            <i class="fas fa-film"></i> You Might Also Like
+                        </h3>
+                        <div class="flex gap-4 overflow-x-auto pb-4 custom-scrollbar" id="modal-similar-list">
+                            <!-- Similar Items -->
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Application Logic -->
+    <script src="script.js"></script>
+</body>
+</html>
