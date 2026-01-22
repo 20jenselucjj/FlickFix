@@ -689,8 +689,15 @@ dom.buttons.skip.addEventListener('click', () => {
 dom.buttons.add.addEventListener('click', () => {
     if (!state.currentItem) return;
     
-    // Check duplicates
-    if (!state.watchlist.some(i => i.id === state.currentItem.id)) {
+    // Check if already in watchlist
+    const isInWatchlist = state.watchlist.some(i => i.id === state.currentItem.id);
+
+    if (isInWatchlist) {
+        // Remove from watchlist
+        removeFromWatchlist(state.currentItem.id);
+        updateAddButton(false);
+    } else {
+        // Add to watchlist
         // Add media_type to item before saving, as fetch result might not have it explicitly in 'discover' sometimes
         const itemToSave = { ...state.currentItem, media_type: state.mediaType };
         state.watchlist.push(itemToSave);
