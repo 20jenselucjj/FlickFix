@@ -459,10 +459,10 @@ function switchTab(tabName) {
     // Update Buttons
     dom.modal.tabs.forEach(btn => {
         if (btn.dataset.tab === tabName) {
-            btn.classList.add('text-red-500', 'border-red-500');
+            btn.classList.add('text-blue-500', 'border-blue-500');
             btn.classList.remove('text-gray-400', 'border-transparent');
         } else {
-            btn.classList.remove('text-red-500', 'border-red-500');
+            btn.classList.remove('text-blue-500', 'border-blue-500');
             btn.classList.add('text-gray-400', 'border-transparent');
         }
     });
