@@ -2,8 +2,10 @@
 
 /* Global Gradient Background */
 body {
-    background: radial-gradient(circle at top right, #1f2937, #111827, #000000);
+    /* Deeper, richer background to make glass pop */
+    background: radial-gradient(circle at 50% 0%, #2d3748, #1a202c, #000000);
     background-attachment: fixed;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
 }
 
 /* Smooth Fade In Animation */
@@ -19,7 +21,7 @@ body {
 }
 
 .fade-in {
-    animation: fadeInScale 0.4s ease-out forwards;
+    animation: fadeInScale 0.4s cubic-bezier(0.25, 0.8, 0.25, 1) forwards;
 }
 
 /* Hero Card Transition - Slide Up */
@@ -35,7 +37,7 @@ body {
 }
 
 .slide-up {
-    animation: slideUpFade 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    animation: slideUpFade 0.6s cubic-bezier(0.25, 0.8, 0.25, 1) forwards;
 }
 
 /* Custom Scrollbar */
@@ -45,46 +47,209 @@ body {
 }
 
 .custom-scrollbar::-webkit-scrollbar-track {
-    background: #1f2937;
+    background: rgba(0, 0, 0, 0.1);
 }
 
 .custom-scrollbar::-webkit-scrollbar-thumb {
-    background: #4b5563;
+    background: rgba(255, 255, 255, 0.2);
     border-radius: 3px;
 }
 
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-    background: #6b7280;
+    background: rgba(255, 255, 255, 0.4);
 }
 
-::-webkit-scrollbar {
-    width: 8px;
+/* --- Apple Liquid Glass System --- */
+
+/* Base Glass Material (for cards, panels, navbar) */
+.glass-panel {
+    background: rgba(30, 30, 35, 0.65);
+    backdrop-filter: blur(20px) saturate(180%);
+    -webkit-backdrop-filter: blur(20px) saturate(180%);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    box-shadow: 
+        0 8px 32px 0 rgba(0, 0, 0, 0.3),
+        inset 0 1px 1px rgba(255, 255, 255, 0.15);
 }
 
-::-webkit-scrollbar-track {
-    background: #111827; 
+/* Glass Button Base */
+.glass-btn {
+    position: relative;
+    overflow: hidden;
+    border: none;
+    backdrop-filter: blur(10px);
+    transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
+    box-shadow: 
+        0 4px 15px rgba(0, 0, 0, 0.2),
+        inset 0 1px 0 rgba(255, 255, 255, 0.3);
 }
 
-::-webkit-scrollbar-thumb {
-    background: #374151; 
-    border-radius: 4px;
+/* The "Liquid" Shine on top half */
+.glass-btn::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 50%;
+    background: linear-gradient(to bottom, rgba(255, 255, 255, 0.25), transparent);
+    border-radius: inherit; /* Inherit border radius from parent */
+    opacity: 0.8;
+    pointer-events: none;
 }
 
-::-webkit-scrollbar-thumb:hover {
-    background: #4b5563; 
+/* Hover State - Brighter & Lift */
+.glass-btn:hover {
+    transform: translateY(-2px) scale(1.02);
+    filter: brightness(1.1);
+    box-shadow: 
+        0 8px 25px rgba(0, 0, 0, 0.3),
+        inset 0 1px 0 rgba(255, 255, 255, 0.4);
 }
 
-/* Line Clamp Support (in case Tailwind plugin isn't active/working fully) */
-.line-clamp-6 {
-    display: -webkit-box;
-    -webkit-line-clamp: 6;
-    -webkit-box-orient: vertical;
+/* Active/Click State */
+.glass-btn:active {
+    transform: translateY(1px) scale(0.98);
+    filter: brightness(0.95);
+}
+
+/* Color Variants */
+.glass-btn-primary { /* Blue */
+    background: linear-gradient(135deg, #3b82f6, #2563eb);
+}
+.glass-btn-primary:hover {
+    box-shadow: 0 8px 25px rgba(37, 99, 235, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.3);
+}
+
+.glass-btn-success { /* Green */
+    background: linear-gradient(135deg, #22c55e, #16a34a);
+}
+.glass-btn-success:hover {
+    box-shadow: 0 8px 25px rgba(22, 163, 74, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.3);
+}
+
+.glass-btn-neutral { /* Gray */
+    background: linear-gradient(135deg, #4b5563, #374151);
+}
+
+.glass-btn-red { /* Red */
+    background: linear-gradient(135deg, #ef4444, #dc2626);
+}
+.glass-btn-red:hover {
+    box-shadow: 0 8px 25px rgba(220, 38, 38, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.3);
+}
+
+/* Specific component overrides */
+.glass-nav {
+    background: rgba(15, 23, 42, 0.7);
+    backdrop-filter: blur(20px) saturate(180%);
+    -webkit-backdrop-filter: blur(20px) saturate(180%);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+/* Dropdown Menus */
+.glass-dropdown {
+    background: rgba(30, 30, 35, 0.85) !important;
+    backdrop-filter: blur(24px) saturate(180%) !important;
+    border: 1px solid rgba(255, 255, 255, 0.15) !important;
+    box-shadow: 0 20px 40px rgba(0,0,0,0.4) !important;
+}
+
+/* --- Apple-style Liquid Glass Toggle (Red Theme) --- */
+.toggle-wrapper {
+    position: relative;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.toggle-checkbox {
+    display: none;
+}
+
+.toggle-container {
+    position: relative;
+    width: 240px;
+    height: 44px;
+    background: rgba(30, 30, 35, 0.5);
+    backdrop-filter: blur(15px);
+    -webkit-backdrop-filter: blur(15px);
+    border-radius: 9999px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 4px;
+    box-shadow: 
+        inset 0 1px 3px rgba(0, 0, 0, 0.4), 
+        border 1px solid rgba(255, 255, 255, 0.1);
+    cursor: pointer;
     overflow: hidden;
 }
 
-/* Glass effect tweaks */
-.glass-panel {
-    background: rgba(31, 41, 55, 0.7);
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
+/* The sliding liquid "pill" */
+.toggle-button {
+    position: absolute;
+    top: 4px;
+    left: 4px;
+    width: calc(50% - 4px);
+    height: calc(100% - 8px);
+    background: linear-gradient(135deg, #ef4444, #dc2626);
+    border-radius: 9999px;
+    box-shadow: 
+        0 2px 10px rgba(220, 38, 38, 0.4),
+        inset 0 1px 0 rgba(255, 255, 255, 0.3);
+    transition: all 0.5s cubic-bezier(0.25, 0.8, 0.25, 1);
+    z-index: 1;
+}
+
+.toggle-button::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 50%;
+    background: linear-gradient(to bottom, rgba(255, 255, 255, 0.3), transparent);
+    border-radius: 9999px 9999px 0 0;
+    opacity: 0.9;
+}
+
+.toggle-labels {
+    position: relative;
+    display: flex;
+    width: 100%;
+    height: 100%;
+    z-index: 2;
+}
+
+.toggle-label {
+    flex: 1;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.5);
+    transition: color 0.3s ease;
+    user-select: none;
+    font-size: 0.875rem;
+    letter-spacing: 0.025em;
+}
+
+.toggle-checkbox:checked + .toggle-container .toggle-button {
+    left: calc(50% + 0px);
+    transform: translateX(0);
+}
+
+.toggle-checkbox:not(:checked) + .toggle-container .toggle-labels .toggle-label:first-child {
+    color: #ffffff;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+}
+
+.toggle-checkbox:checked + .toggle-container .toggle-labels .toggle-label:last-child {
+    color: #ffffff;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+}
+
+.toggle-container:hover .toggle-button {
+    filter: brightness(1.1);
 }

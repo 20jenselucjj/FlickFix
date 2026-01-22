@@ -89,8 +89,7 @@ const dom = {
         watchlist: document.getElementById('watchlist-view')
     },
     buttons: {
-        movie: document.getElementById('btn-movie'),
-        tv: document.getElementById('btn-tv'),
+        toggle: document.getElementById('media-toggle'),
         skip: document.getElementById('btn-skip'),
         add: document.getElementById('btn-add'),
         trailer: document.getElementById('btn-trailer'),
@@ -127,8 +126,18 @@ const dom = {
         tagline: document.getElementById('modal-tagline'),
         image: document.getElementById('modal-backdrop-img'),
         castGrid: document.getElementById('modal-cast-grid'),
-        similarList: document.getElementById('modal-similar-list'),
-        similarTitle: document.getElementById('modal-similar-title')
+        similarGrid: document.getElementById('modal-similar-grid'), // Renamed from similarList
+        overviewText: document.getElementById('modal-overview-text'),
+        metadataBadges: document.getElementById('modal-metadata-badges'),
+        metaRelease: document.getElementById('modal-meta-release'),
+        metaGenre: document.getElementById('modal-meta-genre'),
+        metaDirector: document.getElementById('modal-meta-director'),
+        metaLang: document.getElementById('modal-meta-lang'),
+        tabs: document.querySelectorAll('.tab-btn'),
+        tabContents: document.querySelectorAll('.tab-content'),
+        btnTrailer: document.getElementById('modal-btn-trailer'),
+        btnWatchlist: document.getElementById('modal-btn-watchlist'),
+        btnShare: document.getElementById('modal-btn-share')
     }
 };
 
@@ -310,6 +319,9 @@ async function openDetailsModal() {
     dom.modal.container.classList.remove('hidden');
     document.body.style.overflow = 'hidden'; // Disable scroll
 
+    // Reset Tabs
+    switchTab('overview');
+
     // Set Basic Info
     dom.modal.title.textContent = item.title || item.name;
     dom.modal.image.src = item.backdrop_path 
@@ -317,39 +329,79 @@ async function openDetailsModal() {
         : (item.poster_path ? `${IMAGE_BASE_URL}${item.poster_path}` : '');
     
     dom.modal.tagline.textContent = 'Loading details...';
+    dom.modal.overviewText.textContent = item.overview || 'No overview available.';
     dom.modal.castGrid.innerHTML = '<p class="text-gray-500">Loading cast...</p>';
-    dom.modal.similarList.innerHTML = '<p class="text-gray-500">Loading similar...</p>';
+    dom.modal.similarGrid.innerHTML = '<p class="text-gray-500">Loading similar...</p>';
 
-    // Update Similar Title based on Mood
-    // The default is set in index.html, but we override it here dynamically
-    if (MOODS[state.currentMood]) {
-        // Use innerHTML to preserve the icon
-        dom.modal.similarTitle.innerHTML = `<i class="fas fa-film"></i> ${MOODS[state.currentMood].label}`;
-    }
+    // Metadata Placeholders
+    dom.modal.metadataBadges.innerHTML = '';
+    dom.modal.metaRelease.textContent = '...';
+    dom.modal.metaGenre.textContent = '...';
+    dom.modal.metaDirector.textContent = '...';
+    dom.modal.metaLang.textContent = '...';
 
-    // Fetch Full Details (for tagline/runtime etc)
+    // Update Watchlist Button State in Modal
+    const isInWatchlist = state.watchlist.some(i => i.id === item.id);
+    updateModalWatchlistButton(isInWatchlist);
+
+    // Fetch Full Details (for tagline/runtime/production etc)
     fetch(`${BASE_URL}/${type}/${item.id}?language=en-US`, { headers })
         .then(r => r.json())
         .then(details => {
             dom.modal.tagline.textContent = details.tagline || '';
+            
+            // Metadata: Release Year
+            const date = details.release_date || details.first_air_date || '';
+            const year = date.split('-')[0];
+            dom.modal.metaRelease.textContent = date; // Full date
+
+            // Metadata: Genres
+            const genreNames = details.genres.map(g => g.name).join(', ');
+            dom.modal.metaGenre.textContent = genreNames;
+
+            // Metadata: Language
+            dom.modal.metaLang.textContent = details.original_language;
+
+            // Metadata: Runtime (Movies) or Episodes (TV)
+            let duration = '';
+            if (details.runtime) {
+                const h = Math.floor(details.runtime / 60);
+                const m = details.runtime % 60;
+                duration = `${h}h ${m}m`;
+            } else if (details.number_of_episodes) {
+                duration = `${details.number_of_seasons} Seasons`;
+            }
+
+            // Badges
+            dom.modal.metadataBadges.innerHTML = `
+                <span class="px-2 py-1 rounded bg-white/10 text-xs font-bold text-white uppercase">${type === 'movie' ? 'Movie' : 'TV Show'}</span>
+                ${year ? `<span class="px-2 py-1 rounded bg-white/10 text-xs font-bold text-gray-300">${year}</span>` : ''}
+                ${duration ? `<span class="px-2 py-1 rounded bg-white/10 text-xs font-bold text-gray-300">${duration}</span>` : ''}
+                <span class="px-2 py-1 rounded bg-yellow-500/20 text-yellow-500 text-xs font-bold flex items-center gap-1"><i class="fas fa-star"></i> ${details.vote_average.toFixed(1)}</span>
+            `;
         });
 
-    // Fetch Credits
+    // Fetch Credits (Cast & Crew)
     fetch(`${BASE_URL}/${type}/${item.id}/credits?language=en-US`, { headers })
         .then(r => r.json())
         .then(data => {
+            // Find Director (Crew)
+            const director = data.crew.find(c => c.job === 'Director');
+            dom.modal.metaDirector.textContent = director ? director.name : 'N/A';
+
+            // Cast
             dom.modal.castGrid.innerHTML = '';
-            const cast = data.cast.slice(0, 8); // Top 8
+            const cast = data.cast.slice(0, 10); // Top 10
             if (cast.length === 0) dom.modal.castGrid.innerHTML = '<p class="text-gray-500 col-span-4">No cast info available.</p>';
             
             cast.forEach(actor => {
                 const img = actor.profile_path ? `${POSTER_BASE_URL}${actor.profile_path}` : 'https://via.placeholder.com/150x225?text=No+Img';
                 const el = document.createElement('div');
-                el.className = 'flex items-center gap-3 bg-gray-800 rounded-lg p-2';
+                el.className = 'flex items-center gap-3 bg-white/5 border border-white/10 rounded-xl p-3 hover:bg-white/10 transition-colors duration-300';
                 el.innerHTML = `
-                    <img src="${img}" class="w-10 h-10 rounded-full object-cover">
+                    <img src="${img}" class="w-12 h-12 rounded-full object-cover ring-2 ring-white/10">
                     <div>
-                        <p class="text-xs font-bold text-gray-200 leading-tight">${actor.name}</p>
+                        <p class="text-sm font-bold text-gray-200 leading-tight">${actor.name}</p>
                         <p class="text-xs text-gray-400 leading-tight">${actor.character}</p>
                     </div>
                 `;
@@ -361,56 +413,68 @@ async function openDetailsModal() {
     fetch(`${BASE_URL}/${type}/${item.id}/recommendations?language=en-US&page=1`, { headers })
         .then(r => r.json())
         .then(data => {
-            dom.modal.similarList.innerHTML = '';
+            dom.modal.similarGrid.innerHTML = '';
             
             let similar = data.results || [];
-
-            // Filter recommendations based on active Mood
-            if (state.currentMood !== 'any') {
-                const moodConfig = MOODS[state.currentMood][type];
-                similar = similar.filter(sim => {
-                    // 1. Must NOT contain any excluded genres
-                    const hasExcluded = sim.genre_ids.some(id => moodConfig.exclude.includes(id));
-                    if (hasExcluded) return false;
-
-                    // 2. Must contain AT LEAST ONE included genre (to ensure vibe consistency)
-                    const hasIncluded = sim.genre_ids.some(id => moodConfig.include.includes(id));
-                    return hasIncluded;
-                });
-            }
-
-            // Take top 6 matching results
-            similar = similar.slice(0, 6);
+            // Reuse existing filter logic or just show top relevant
+            // Let's show unfiltered recommendations in the modal as "Similar" usually implies direct relation
+            // regardless of the current user "Mood". But to be safe/consistent let's just take top 8 raw similar.
+            similar = similar.slice(0, 8);
 
             if (similar.length === 0) {
-                dom.modal.similarList.innerHTML = '<p class="text-gray-500 italic">No recommendations match your current mood.</p>';
+                dom.modal.similarGrid.innerHTML = '<p class="text-gray-500 italic col-span-full">No similar recommendations found.</p>';
                 return;
             }
             
             similar.forEach(sim => {
                 if (!sim.poster_path) return;
                 const el = document.createElement('div');
-                el.className = 'min-w-[120px] w-[120px] cursor-pointer hover:scale-105 transition-transform group';
+                el.className = 'cursor-pointer hover:scale-105 transition-transform group';
                 el.innerHTML = `
-                    <div class="relative rounded-lg overflow-hidden shadow-md mb-2">
-                        <img src="${POSTER_BASE_URL}${sim.poster_path}" class="w-full h-auto">
+                    <div class="relative rounded-lg overflow-hidden shadow-lg mb-2 aspect-[2/3]">
+                        <img src="${POSTER_BASE_URL}${sim.poster_path}" class="w-full h-full object-cover">
                         <div class="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                            <i class="fas fa-play text-white text-2xl"></i>
+                            <i class="fas fa-play text-white text-2xl drop-shadow-lg"></i>
+                        </div>
+                        <div class="absolute bottom-0 left-0 right-0 p-2 bg-gradient-to-t from-black/80 to-transparent">
+                             <span class="text-[10px] font-bold text-yellow-400"><i class="fas fa-star"></i> ${sim.vote_average.toFixed(1)}</span>
                         </div>
                     </div>
-                    <p class="text-xs text-center text-gray-300 truncate group-hover:text-white transition-colors">${sim.title || sim.name}</p>
+                    <p class="text-xs text-center text-gray-300 truncate group-hover:text-white transition-colors font-medium">${sim.title || sim.name}</p>
                 `;
-                // Clicking a similar movie loads it into the main view and closes modal
                 el.addEventListener('click', () => {
-                    closeModal();
+                    // Stay in modal? Or switch main view?
+                    // User expectation: usually navigating to a new item switches the view.
+                    // Let's reload modal with new item without closing it to feel like "browsing".
                     state.currentItem = sim;
-                    state.mediaType = sim.media_type || type; // Recommendations usually match type but safety check
-                    renderHero(sim);
-                    window.scrollTo(0, 0);
+                    state.mediaType = sim.media_type || type; 
+                    openDetailsModal(); // Recursive call effectively reloads the modal content
                 });
-                dom.modal.similarList.appendChild(el);
+                dom.modal.similarGrid.appendChild(el);
             });
         });
+}
+
+function switchTab(tabName) {
+    // Update Buttons
+    dom.modal.tabs.forEach(btn => {
+        if (btn.dataset.tab === tabName) {
+            btn.classList.add('text-red-500', 'border-red-500');
+            btn.classList.remove('text-gray-400', 'border-transparent');
+        } else {
+            btn.classList.remove('text-red-500', 'border-red-500');
+            btn.classList.add('text-gray-400', 'border-transparent');
+        }
+    });
+
+    // Update Content
+    dom.modal.tabContents.forEach(content => {
+        if (content.id === `tab-${tabName}`) {
+            content.classList.remove('hidden');
+        } else {
+            content.classList.add('hidden');
+        }
+    });
 }
 
 function closeModal() {
@@ -497,13 +561,24 @@ function renderHero(item) {
 function updateAddButton(saved) {
     const btn = dom.buttons.add;
     if (saved) {
-        btn.innerHTML = '<i class="fas fa-check"></i> Saved';
-        btn.classList.remove('bg-green-600', 'hover:bg-green-500');
-        btn.classList.add('bg-gray-600', 'cursor-default');
+        btn.innerHTML = '<i class="fas fa-check"></i> In Watchlist';
+        btn.classList.remove('glass-btn-success');
+        btn.classList.add('glass-btn-neutral', 'cursor-default');
     } else {
         btn.innerHTML = '<i class="fas fa-plus"></i> Add to Watchlist';
-        btn.classList.add('bg-green-600', 'hover:bg-green-500');
-        btn.classList.remove('bg-gray-600', 'cursor-default');
+        btn.classList.add('glass-btn-success');
+        btn.classList.remove('glass-btn-neutral', 'cursor-default');
+    }
+}
+
+function updateModalWatchlistButton(saved) {
+    const btn = dom.modal.btnWatchlist;
+    if (saved) {
+        btn.innerHTML = '<i class="fas fa-check"></i> In Watchlist';
+        btn.classList.add('text-green-400');
+    } else {
+        btn.innerHTML = '<i class="fas fa-plus"></i> Add to Watchlist';
+        btn.classList.remove('text-green-400');
     }
 }
 
@@ -528,25 +603,26 @@ function renderWatchlist() {
             : 'https://via.placeholder.com/500x750?text=No+Image';
 
         const card = document.createElement('div');
-        card.className = 'bg-gray-800 rounded-lg overflow-hidden shadow-lg group relative hover:scale-105 transition-transform duration-200';
+        card.className = 'glass-panel rounded-2xl overflow-hidden group relative hover:scale-105 transition-transform duration-300 border-0';
         
         card.innerHTML = `
             <div class="relative aspect-[2/3]">
                 <img src="${posterUrl}" alt="${title}" class="w-full h-full object-cover">
                 <!-- Hover Overlay -->
-                <div class="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-                    <button class="remove-btn absolute top-2 right-2 bg-red-600/90 text-white w-8 h-8 rounded-full hover:bg-red-700 flex items-center justify-center shadow-md transform hover:scale-110 transition-all z-10" data-id="${item.id}" title="Remove">
+                <div class="absolute inset-0 bg-black/40 backdrop-blur-sm opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
+                    <button class="remove-btn absolute top-2 right-2 glass-btn glass-btn-red text-white w-8 h-8 rounded-full flex items-center justify-center shadow-lg transform hover:scale-110 transition-all z-10" data-id="${item.id}" title="Remove">
                         <i class="fas fa-trash text-xs"></i>
                     </button>
+                    <div class="glass-btn glass-btn-primary px-4 py-2 rounded-full text-xs font-bold pointer-events-none transform translate-y-4 group-hover:translate-y-0 transition-transform duration-300">View Details</div>
                 </div>
-                <div class="absolute bottom-0 left-0 right-0 p-2 bg-gradient-to-t from-black to-transparent pointer-events-none">
-                    <div class="flex items-center text-yellow-400 text-xs font-bold">
+                <div class="absolute bottom-0 left-0 right-0 p-3 bg-gradient-to-t from-black/80 to-transparent pointer-events-none">
+                    <div class="flex items-center text-yellow-400 text-xs font-bold drop-shadow-md">
                         <i class="fas fa-star mr-1"></i> ${item.vote_average.toFixed(1)}
                     </div>
                 </div>
             </div>
-            <div class="p-3">
-                <h3 class="font-bold text-sm truncate text-gray-200">${title}</h3>
+            <div class="p-4 bg-white/5 backdrop-blur-md">
+                <h3 class="font-bold text-sm truncate text-gray-100 drop-shadow-sm">${title}</h3>
             </div>
         `;
         
@@ -634,37 +710,16 @@ dom.buttons.trailer.addEventListener('click', () => {
     }
 });
 
-dom.buttons.movie.addEventListener('click', () => {
-    if (state.mediaType !== 'movie') {
-        state.mediaType = 'movie';
-        dom.buttons.movie.classList.add('bg-red-600', 'text-white', 'shadow-md');
-        dom.buttons.movie.classList.remove('text-gray-400');
-        
-        dom.buttons.tv.classList.remove('bg-red-600', 'text-white', 'shadow-md');
-        dom.buttons.tv.classList.add('text-gray-400');
+// New Toggle Logic
+dom.buttons.toggle.addEventListener('change', (e) => {
+    const isTV = e.target.checked;
+    const newType = isTV ? 'tv' : 'movie';
+    
+    if (state.mediaType !== newType) {
+        state.mediaType = newType;
         
         // Reset filters when switching type
         selectGenre('all'); // This calls fetchRandomContent
-        // But selectGenre also resets mood to 'any' if not 'all', which is fine.
-        // Actually selectGenre('all') does NOT reset Mood.
-        // So we should probably keep Mood if possible, but genres are different.
-        // Let's reset Genre to All, and Keep Mood if valid? 
-        // Moods are mapped in MOODS object for both movie and tv, so keeping Mood is fine.
-        // But the dropdown for genres needs to update.
-        populateGenreDropdown();
-    }
-});
-
-dom.buttons.tv.addEventListener('click', () => {
-    if (state.mediaType !== 'tv') {
-        state.mediaType = 'tv';
-        dom.buttons.tv.classList.add('bg-red-600', 'text-white', 'shadow-md');
-        dom.buttons.tv.classList.remove('text-gray-400');
-        
-        dom.buttons.movie.classList.remove('bg-red-600', 'text-white', 'shadow-md');
-        dom.buttons.movie.classList.add('text-gray-400');
-        
-        selectGenre('all');
         populateGenreDropdown();
     }
 });
@@ -692,6 +747,68 @@ dom.hero.overview.addEventListener('click', () => {
 dom.buttons.details.addEventListener('click', openDetailsModal);
 dom.modal.close.addEventListener('click', closeModal);
 dom.modal.backdrop.addEventListener('click', closeModal);
+
+dom.modal.tabs.forEach(btn => {
+    btn.addEventListener('click', () => {
+        switchTab(btn.dataset.tab);
+    });
+});
+
+dom.modal.btnWatchlist.addEventListener('click', () => {
+    if (!state.currentItem) return;
+    const item = state.currentItem;
+    const isInWatchlist = state.watchlist.some(i => i.id === item.id);
+    
+    if (isInWatchlist) {
+        removeFromWatchlist(item.id);
+        updateModalWatchlistButton(false);
+    } else {
+        const itemToSave = { ...item, media_type: state.mediaType };
+        state.watchlist.push(itemToSave);
+        saveWatchlist();
+        updateModalWatchlistButton(true);
+    }
+});
+
+dom.modal.btnTrailer.addEventListener('click', () => {
+    if (state.currentItem) {
+        fetchTrailer(state.currentItem.id, state.mediaType);
+    }
+});
+
+dom.modal.btnShare.addEventListener('click', async () => {
+    if (!state.currentItem) return;
+    
+    const item = state.currentItem;
+    const title = item.title || item.name;
+    const type = state.mediaType === 'movie' ? 'movie' : 'tv';
+    const url = `https://www.themoviedb.org/${type}/${item.id}`;
+    const shareData = {
+        title: `Check out ${title} on FlickFix!`,
+        text: `I found this amazing ${state.mediaType === 'movie' ? 'movie' : 'show'} called "${title}". Check it out!`,
+        url: url
+    };
+
+    try {
+        if (navigator.share) {
+            await navigator.share(shareData);
+        } else {
+            // Fallback to clipboard
+            await navigator.clipboard.writeText(`${shareData.text} ${url}`);
+            
+            // Visual feedback
+            const originalIcon = dom.modal.btnShare.innerHTML;
+            dom.modal.btnShare.innerHTML = '<i class="fas fa-check text-green-400"></i>';
+            setTimeout(() => {
+                dom.modal.btnShare.innerHTML = originalIcon;
+            }, 2000);
+            
+            alert('Link copied to clipboard!');
+        }
+    } catch (err) {
+        console.error('Error sharing:', err);
+    }
+});
 
 // Mood Dropdown Logic
 const moodOptions = document.querySelectorAll('.mood-option');
