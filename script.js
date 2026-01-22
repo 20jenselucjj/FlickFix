@@ -503,32 +503,55 @@ function renderHero(item) {
     const date = item.release_date || item.first_air_date;
     const year = date ? date.split('-')[0] : 'N/A';
     
-    // Reset background while loading new one
-    document.body.style.background = 'linear-gradient(to bottom, #111827, #000000)';
+    // Reset background while loading new one (Optional: keeps it smooth if we don't reset, 
+    // but resetting ensures we don't have mismatching colors if extraction fails. 
+    // Let's keep the previous color until the new one loads for smoother transition.)
+    // document.body.style.background = 'linear-gradient(to bottom, #111827, #000000)';
 
     // Setup poster for Color Thief
     dom.hero.poster.crossOrigin = "anonymous";
-    dom.hero.poster.src = item.poster_path 
+    const posterUrl = item.poster_path 
         ? `${IMAGE_BASE_URL}${item.poster_path}` 
         : 'https://via.placeholder.com/500x750?text=No+Image';
     
+    // Load handler
     dom.hero.poster.onload = () => {
         try {
-            const color = colorThief.getColor(dom.hero.poster);
-            const [r, g, b] = color;
-            // Apply gradient to body
-            const bgStyle = `linear-gradient(to bottom, rgba(${r},${g},${b},0.8), #000000)`;
-            document.body.style.background = bgStyle;
-            state.currentBackgroundColor = bgStyle; // Save for view toggling
+            // Get a palette of 3 colors instead of just one for a richer effect
+            const palette = colorThief.getPalette(dom.hero.poster, 3);
+            const [c1, c2, c3] = palette;
             
-            // Optional: Add a subtle glow to the card
-            dom.hero.card.style.boxShadow = `0 20px 50px rgba(${r},${g},${b},0.3)`;
+            // "Best" Option: Multi-point Mesh Gradient
+            // This creates a sophisticated, studio-lighting feel compared to a single flat gradient
+            const bgStyle = `
+                radial-gradient(circle at 15% 15%, rgba(${c1[0]},${c1[1]},${c1[2]},0.5) 0%, transparent 50%),
+                radial-gradient(circle at 85% 15%, rgba(${c2[0]},${c2[1]},${c2[2]},0.5) 0%, transparent 50%),
+                radial-gradient(circle at 50% 80%, rgba(${c3[0]},${c3[1]},${c3[2]},0.3) 0%, transparent 60%),
+                #0f172a
+            `;
+            
+            document.body.style.background = bgStyle;
+            state.currentBackgroundColor = bgStyle;
+
+            // Apply glow to card using the dominant color (c1)
+            dom.hero.card.style.boxShadow = `0 20px 50px rgba(${c1[0]},${c1[1]},${c1[2]},0.3)`;
+            dom.hero.card.style.borderColor = `rgba(${c1[0]},${c1[1]},${c1[2]},0.2)`;
         } catch (e) {
             console.warn('Could not extract color', e);
+            // Fallback
             document.body.style.background = 'linear-gradient(to bottom, #111827, #000000)';
-            state.currentBackgroundColor = null;
+        } finally {
+            // Only reveal content when image is ready
+            setLoading(false);
         }
     };
+
+    dom.hero.poster.onerror = () => {
+        setLoading(false);
+    };
+
+    // Trigger load
+    dom.hero.poster.src = posterUrl;
 
     dom.hero.title.textContent = `${title} (${year})`;
     dom.hero.rating.textContent = item.vote_average.toFixed(1);
@@ -537,7 +560,7 @@ function renderHero(item) {
     
     // Reset overview expansion state
     dom.hero.overview.classList.add('line-clamp-2'); 
-
+    
     // Genres
     dom.hero.genres.innerHTML = '';
     if (item.genre_ids) {
@@ -554,8 +577,6 @@ function renderHero(item) {
     // Check if already in watchlist to update button state
     const isInWatchlist = state.watchlist.some(i => i.id === item.id);
     updateAddButton(isInWatchlist);
-
-    setLoading(false);
 }
 
 function updateAddButton(saved) {
@@ -607,7 +628,7 @@ function renderWatchlist() {
         
         card.innerHTML = `
             <div class="relative aspect-[2/3]">
-                <img src="${posterUrl}" alt="${title}" class="w-full h-full object-cover">
+                <img src="${posterUrl}" alt="${title}" class="w-full h-full object-cover" loading="lazy">
                 <!-- Hover Overlay -->
                 <div class="absolute inset-0 bg-black/40 backdrop-blur-sm opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
                     <button class="remove-btn absolute top-2 right-2 glass-btn glass-btn-red text-white w-8 h-8 rounded-full flex items-center justify-center shadow-lg transform hover:scale-110 transition-all z-10" data-id="${item.id}" title="Remove">

@@ -2,20 +2,15 @@
 
 /* Global Gradient Background */
 body {
-    /* Animated Deep Ocean/Aurora Background */
-    background: linear-gradient(-45deg, #0f172a, #1e3a8a, #172554, #000000);
-    background-size: 400% 400%;
-    animation: auroraGradient 15s ease infinite;
+    /* Dynamic Background controlled by JS */
+    background: #0f172a; /* Default fallback */
     background-attachment: fixed;
-    font-family: 'Outfit', sans-serif; /* Updated Font */
+    font-family: 'Outfit', sans-serif;
     color: #f3f4f6;
+    transition: background 1s ease-in-out; /* Smooth transition for color changes */
 }
 
-@keyframes auroraGradient {
-    0% { background-position: 0% 50%; }
-    50% { background-position: 100% 50%; }
-    100% { background-position: 0% 50%; }
-}
+/* Removed fixed Aurora animation to allow dynamic ColorThief */
 
 /* Smooth Fade In Animation */
 @keyframes fadeInScale {
